@@ -6,5 +6,6 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "openpyxl>=3.1.5",
+    "pyfiglet>=1.0.4",
     "terminaltexteffects>=0.14.2",
 ]
