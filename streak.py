@@ -319,7 +319,7 @@ class Habit:
 #     Function to add streak to the csv file
 # =========================================================================================
 # """
-    def _add_streak_to_csv(self) -> None:
+    def _add_streak_to_csv(self) -> bool:
         df = self._verify_dataframe()
 
         overlaps = self._check_overlapping_time_period(df)
@@ -327,9 +327,9 @@ class Habit:
             curr_df = pd.DataFrame([[self.name, self.start_date, self.duration, self.end_date, self.done_today, self.curr_streak, self.longest_streak, self.total_successful_days, self.num_resets, datetime.now().date()]], columns=self.headers)
             df = pd.concat([df, curr_df], ignore_index=True)
             df.to_csv(self.source_csv, index=False)
-            return
+            return True
         print(f"Another streak of the same name exists in between the time period of this one. Choose another name.")
-        return
+        return False
 
 
 # """
@@ -338,11 +338,13 @@ class Habit:
 #     Function to add streak to the excel file
 # =========================================================================================
 # """
-    def _add_streak_to_excel(self) -> bool:
-        self._add_custom_dest_path()
-        final_file_path = self.dest_folder / self.dest_workbook
-        print(final_file_path)
-
+    def _add_streaks_to_excel(self) -> bool:
+        print("here")
+        #dest path to be passed as arg. this is just for testing
+        dest_path = self.dest_folder / self.dest_workbook
+        source_df = self._verify_dataframe()
+        for row in source_df.iterrows():
+            print(row)
 
 # """
 # =========================================================================================
@@ -386,5 +388,8 @@ class Habit:
 
 
 streak = Habit()
+# streak.create_streak()
+# streak.create_streak()
+# streak.create_streak()
 # print(streak.view_latest_details())
-streak._add_streak_to_excel()
+streak._add_streaks_to_excel()
