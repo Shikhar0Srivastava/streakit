@@ -13,16 +13,18 @@ import pandas as pd
 import os
 from dateutil.relativedelta import relativedelta
 from InquirerPy import inquirer
+from pathlib import Path
 
 class Habit:
-    def __init__(self, name: str | None) -> None:
+    def __init__(self, name: str | None = "") -> None:
         # Always Fixed
-        self.source_csv = "data//streak_list.csv"
-        self.dest_workbook = "streaks.xlsx"
+        self.source_csv = Path("data/streak_list.csv")
+        self.dest_folder = Path.home() / "Documents"
+        self.dest_workbook = f"streaks_{datetime.now().date()}_{datetime.now().strftime("%H:%M")}.xlsx"
         self.headers = ["Streak Name", "Start Date", "Commited Days", "End Date", "Completed Today", "Current Streak", "Longest Streak", "Total Successful Days", "Number of Resets", "Last Updated On"]
         
         # Loaded Everytime
-        if name is not None:
+        if len(name) != 0:
             self.name = name
             self._load_from_csv(self.name)
         else:
@@ -150,6 +152,26 @@ class Habit:
             self.last_updated = date_today
         return
 
+
+# """
+# =========================================================================================
+#     Accept input for custom destination path
+# =========================================================================================
+# """
+    def _add_custom_dest_path(self):
+        while True:
+            user_input = input("Enter folder path for saving export file. (Use '/'): ")
+            try:
+                if len(user_input) == 0:
+                    return
+                path = Path(user_input).expanduser()
+                if path.is_dir():
+                    self.dest_folder = path
+                    return
+                else:
+                    print("Wrong path provided. Please provide a valid folder")
+            except Exception as e:
+                print("Exception: Wrong path provided. Please provide a valid folder")
 
 # """
 # =========================================================================================
@@ -316,17 +338,10 @@ class Habit:
 #     Function to add streak to the excel file
 # =========================================================================================
 # """
-    def _add_streak_to_excel(self) -> None:
-        df = self._verify_dataframe()
-
-        overlaps = self._check_overlapping_time_period(df)
-        if not overlaps:
-            curr_df = pd.DataFrame([[self.name, self.start_date, self.duration, self.end_date, self.done_today, self.curr_streak, self.longest_streak, self.total_successful_days, self.num_resets, datetime.now().date()]], columns=self.headers)
-            df = pd.concat([df, curr_df], ignore_index=True)
-            df.to_csv(self.source_csv, index=False)
-            return
-        print(f"Another streak of the same name exists in between the time period of this one. Choose another name.")
-        return
+    def _add_streak_to_excel(self) -> bool:
+        self._add_custom_dest_path()
+        final_file_path = self.dest_folder / self.dest_workbook
+        print(final_file_path)
 
 
 # """
@@ -336,11 +351,14 @@ class Habit:
 # =========================================================================================
 # """
     def create_streak(self) -> None:
-        self._add_name()
-        self._add_start_date()
-        self._add_duration()
-        self._validate_todays_completion(first_time = True)
-        self._add_streak_to_csv()
+        while True:
+            self._add_name()
+            self._add_start_date()
+            self._add_duration()
+            self._validate_todays_completion(first_time = True)
+            added = self._add_streak_to_csv()
+            if added:
+                return
     
 
 # """
@@ -367,5 +385,6 @@ class Habit:
             return {'Error': str(e)}
 
 
-streak = Habit('a')
-print(streak.view_latest_details())
+streak = Habit()
+# print(streak.view_latest_details())
+streak._add_streak_to_excel()
