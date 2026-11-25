@@ -1,7 +1,7 @@
 # TODO:
 # 1. ADD A GET LATEST STREAK VALUES FUNCTION TO CALL BEFORE VALIDATE TODAYS COMPLETION / EXPORT / VIEW DETAILS -- done
 # 2. ADD VIEW DETAILS FUNCTION -- done
-# 3. ADD EXPORT FUNCTION
+# 3. ADD EXPORT FUNCTION -- done
 # 4. CHANGE THE CODE TO CREATE DATA FOLDER FOR SOURCE CSV
 # 5. RENAME EVERYTHING (STREAK -> HABIT)
 # 6. CHANGE USER PROMPTS TO MATCH THE THEME
@@ -16,70 +16,26 @@ from InquirerPy import inquirer
 from pathlib import Path
 
 class Habit:
-    def __init__(self, name: str | None = "") -> None:
+    headers = ["Streak Name", "Start Date", "Commited Days", "End Date", "Completed Today", "Current Streak", "Longest Streak", "Total Successful Days", "Number of Resets", "Last Updated On"]
+    
+    def __init__(self) -> None:
         # Always Fixed
-        self.source_csv = Path("data/streak_list.csv")
-        self.dest_folder = Path.home() / "Documents"
-        self.dest_workbook = f"streaks_{datetime.now().date()}_{datetime.now().strftime("%H:%M")}.xlsx"
-        self.headers = ["Streak Name", "Start Date", "Commited Days", "End Date", "Completed Today", "Current Streak", "Longest Streak", "Total Successful Days", "Number of Resets", "Last Updated On"]
+        self.source_csv = "data//streak_list.csv"
+        self.dest_folder = Path.home() / "workspace"
+        self.dest_workbook = f"streaks_{datetime.now().date().strftime("%Y%m%d")}_{datetime.now().strftime("%H%M")}.xlsx"
         
         # Loaded Everytime
-        if len(name) != 0:
-            self.name = name
-            self._load_from_csv(self.name)
-        else:
-            self.name = "New Streak"
-            self.start_date = datetime.now().date()
-            self.duration = 0
-            self.end_date = self.start_date
-            self.done_today = False
-            self.curr_streak = 0
-            self.longest_streak = 0
-            self.total_successful_days = 0
-            self.num_resets = 0
-            self.last_updated = datetime.now().date()
+        self.name = "New Streak"
+        self.start_date = datetime.now().date()
+        self.duration = 0
+        self.end_date = self.start_date
+        self.done_today = False
+        self.curr_streak = 0
+        self.longest_streak = 0
+        self.total_successful_days = 0
+        self.num_resets = 0
+        self.last_updated = datetime.now().date()
     
-
-# """
-# =========================================================================================
-#     TODO: LOOK AT THIS AGAIN
-#     To verify if the worksheet for the required month exists and create it if not
-# =========================================================================================
-# """
-    def _verify_worksheet(self, workbook, month_name):
-        
-            
-        if month_name not in workbook.sheetnames:
-            worksheet = workbook.create_sheet(month_name)
-        else:
-            worksheet = workbook[month_name]
-
-        self._verify_headers(worksheet=worksheet)
-
-
-# """
-# =========================================================================================
-#     TODO: LOOK AT THIS AGAIN
-#     To check if the headers in the worksheet are what are required.
-#     Basically filtering out anything else if it is put in the excel file manually
-# =========================================================================================
-# """
-    def _verify_headers(self, worksheet):
-
-        # Get all the cells in the first row of the worksheet
-        actual = [
-            worksheet.cell(row=1, column=i).value
-            for i in range(1, len(self.headers) + 1)
-        ]
-
-        if actual != self.headers:
-
-            # Delete all rows where any data may be present
-            worksheet.delete_rows(1, worksheet.max_row)
-
-            # Add the actual headers required
-            worksheet.append(self.headers)
-
 
 # """
 # =========================================================================================
@@ -108,15 +64,15 @@ class Habit:
 #     with start and end dates that encapsulate today's date
 # =========================================================================================
 # """
-    def _load_from_csv(self, name) -> None:
+    def _load_from_csv(self, name, start_date) -> None:
         df = self._verify_dataframe()
-        today_string = str(datetime.now().date())
         streak_data_dict = {}
+        start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
         
         row = df[(df['Streak Name'] == name) & 
-                (df['Start Date'] <= datetime.now().date()) & 
-                (df['End Date'] >= datetime.now().date())
+                (df['Start Date'] == start_date)
             ]
+
         if not row.empty:
             streak_data_dict = row.iloc[0].to_dict()
 
@@ -141,7 +97,8 @@ class Habit:
 #     Getting latest streak values before any operation is to be done on them
 # =========================================================================================
 # """
-    def _get_latest_streak(self):
+    def _get_latest_streak(self, name, start_date):
+        self._load_from_csv(name, start_date)
         date_today = datetime.now().date()
 
         if (date_today - self.last_updated) > timedelta(days=1):
@@ -334,20 +291,6 @@ class Habit:
 
 # """
 # =========================================================================================
-#     TODO: CURRENTLY WORKING ON THIS
-#     Function to add streak to the excel file
-# =========================================================================================
-# """
-    def _add_streaks_to_excel(self) -> bool:
-        print("here")
-        #dest path to be passed as arg. this is just for testing
-        dest_path = self.dest_folder / self.dest_workbook
-        source_df = self._verify_dataframe()
-        for row in source_df.iterrows():
-            print(row)
-
-# """
-# =========================================================================================
 #     Function that triggers when new streak is to be created.
 #     This will call all other functions in order from name input to final addition to excel file
 # =========================================================================================
@@ -368,9 +311,9 @@ class Habit:
 #     Function to view latest details about a habit
 # =========================================================================================
 # """
-    def view_latest_details(self) -> dict:
+    def view_latest_details(self, name, start_date) -> dict:
         try:
-            self._get_latest_streak()
+            self._get_latest_streak(name, start_date)
             self._add_streak_to_csv()
 
             df = pd.read_csv(self.source_csv)
@@ -387,9 +330,93 @@ class Habit:
             return {'Error': str(e)}
 
 
+
+
+# """
+# =========================================================================================
+#     To verify if the worksheet for the required month exists and create it if not
+# =========================================================================================
+# """
+def verify_worksheet(workbook, month_name, headers):
+    
+        
+    if month_name not in workbook.sheetnames:
+        worksheet = workbook.create_sheet(month_name)
+    else:
+        worksheet = workbook[month_name]
+
+    verify_headers(worksheet=worksheet, headers=headers)
+
+
+# """
+# =========================================================================================
+#     To check if the headers in the worksheet are what are required.
+#     Basically filtering out anything else if it is put in the excel file manually
+# =========================================================================================
+# """
+def verify_headers(worksheet, headers):
+
+    # Get all the cells in the first row of the worksheet
+    actual = [
+        worksheet.cell(row=1, column=i).value
+        for i in range(1, len(headers) + 1)
+    ]
+
+    if actual != headers:
+
+        # Delete all rows where any data may be present
+        worksheet.delete_rows(1, worksheet.max_row)
+
+        # Add the actual headers required
+        worksheet.append(headers)
+
+
+# """
+# =========================================================================================
+#     TODO: CURRENTLY WORKING ON THIS
+#     Function to add streak to the excel file
+# =========================================================================================
+# """
+def add_streaks_to_excel(source_df, dest_path, headers) -> bool:
+    workbook = Workbook()
+
+    for index, row in source_df.iterrows():
+        start_month = row['Start Date'].replace(day=1)
+        end_month = row['End Date'].replace(day=1)
+
+        while (start_month <= end_month):
+            month_name = start_month.strftime("%b %Y")
+            verify_worksheet(workbook=workbook, month_name=month_name, headers=headers)
+            row['Start Date'] = str(row['Start Date'])
+            row['End Date'] = str(row['End Date'])
+            row['Last Updated On'] = str(row['Last Updated On'])
+
+            workbook[month_name].append(list(row))
+            start_month += relativedelta(months=1)
+
+    del workbook['Sheet']
+    workbook.save(dest_path)
+
+
+# """
+# =========================================================================================
+#     Function to export the entire list to excel
+# =========================================================================================
+# """
+def export_current_list():
+    habit = Habit()
+    source_df = habit._verify_dataframe()
+    habit._add_custom_dest_path()
+    dest_path = habit.dest_folder / habit.dest_workbook
+    headers = habit.headers
+    add_streaks_to_excel(source_df, dest_path, headers)
+
 streak = Habit()
+streak.create_streak()
 # streak.create_streak()
 # streak.create_streak()
-# streak.create_streak()
-# print(streak.view_latest_details())
-streak._add_streaks_to_excel()
+streak_name = input("Streak name?: ")
+streak_date = input("Start Date?: ")
+print(streak.view_latest_details(streak_name, streak_date))
+# streak._add_streaks_to_excel()
+export_current_list()
