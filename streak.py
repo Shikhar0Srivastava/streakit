@@ -2,7 +2,7 @@
 # 1. ADD A GET LATEST STREAK VALUES FUNCTION TO CALL BEFORE VALIDATE TODAYS COMPLETION / EXPORT / VIEW DETAILS -- done
 # 2. ADD VIEW DETAILS FUNCTION -- done
 # 3. ADD EXPORT FUNCTION -- done
-# 4. CHANGE THE CODE TO CREATE DATA FOLDER FOR SOURCE CSV
+# 4. CHANGE THE CODE TO CREATE DATA FOLDER FOR SOURCE CSV -- done
 # 5. RENAME EVERYTHING (STREAK -> HABIT)
 # 6. CHANGE USER PROMPTS TO MATCH THE THEME
 # 7. ADD TRY EXCEPT EVERYWHERE FOR MISSING VALUE (INCASE SOMEONE CHANGES CSV AFTER CLICKING ON A CHOICE)
@@ -16,12 +16,12 @@ from InquirerPy import inquirer
 from pathlib import Path
 
 class Habit:
-    headers = ["Streak Name", "Start Date", "Commited Days", "End Date", "Completed Today", "Current Streak", "Longest Streak", "Total Successful Days", "Number of Resets", "Last Updated On"]
-    
+      
     def __init__(self) -> None:
         # Always Fixed
-        self.source_csv = "data//streak_list.csv"
-        self.dest_folder = Path.home() / "workspace"
+        self.source_folder = Path("data")
+        self.source_csv = "streak_list.csv"
+        self.dest_folder = Path.home() / "Documents"
         self.dest_workbook = f"streaks_{datetime.now().date().strftime("%Y%m%d")}_{datetime.now().strftime("%H%M")}.xlsx"
         
         # Loaded Everytime
@@ -35,6 +35,7 @@ class Habit:
         self.total_successful_days = 0
         self.num_resets = 0
         self.last_updated = datetime.now().date()
+        self.headers = ["Streak Name", "Start Date", "Commited Days", "End Date", "Completed Today", "Current Streak", "Longest Streak", "Total Successful Days", "Number of Resets", "Last Updated On"]
     
 
 # """
@@ -43,8 +44,10 @@ class Habit:
 # =========================================================================================
 # """
     def _verify_dataframe(self) -> pd.DataFrame:
+        source_file = self.source_folder / self.source_csv
         try:
-            df = pd.read_csv(self.source_csv)
+            self.source_folder.mkdir(parents=True, exist_ok=True)
+            df = pd.read_csv(source_file)
             df['Start Date'] = pd.to_datetime(df['Start Date']).dt.date
             df['End Date'] = pd.to_datetime(df['End Date']).dt.date
             df['Last Updated On'] = pd.to_datetime(df['Last Updated On']).dt.date
@@ -52,9 +55,10 @@ class Habit:
                 return df
         except Exception as e:
             print(str(e))
+            pass
         
         df = pd.DataFrame(columns=self.headers)
-        df.to_csv(self.source_csv, index=False)
+        df.to_csv(source_file, index=False)
         return df
 
 
@@ -117,9 +121,10 @@ class Habit:
 # """
     def _add_custom_dest_path(self):
         while True:
-            user_input = input("Enter folder path for saving export file. (Use '/'): ")
+            user_input = input("Enter folder path for saving export file. Default is Documents folder (Use '/'): ")
             try:
                 if len(user_input) == 0:
+                    self.dest_folder.mkdir(parents=True, exist_ok=True)
                     return
                 path = Path(user_input).expanduser()
                 if path.is_dir():
@@ -379,7 +384,7 @@ def verify_headers(worksheet, headers):
 def add_streaks_to_excel(source_df, dest_path, headers) -> bool:
     workbook = Workbook()
 
-    for index, row in source_df.iterrows():
+    for _, row in source_df.iterrows():
         start_month = row['Start Date'].replace(day=1)
         end_month = row['End Date'].replace(day=1)
 
@@ -394,6 +399,9 @@ def add_streaks_to_excel(source_df, dest_path, headers) -> bool:
             start_month += relativedelta(months=1)
 
     del workbook['Sheet']
+    workbook._sheets.sort(
+        key = lambda ws: datetime.strptime(ws.title, "%b %Y")
+    )
     workbook.save(dest_path)
 
 
@@ -410,12 +418,12 @@ def export_current_list():
     headers = habit.headers
     add_streaks_to_excel(source_df, dest_path, headers)
 
-streak = Habit()
-streak.create_streak()
+# streak = Habit()
 # streak.create_streak()
 # streak.create_streak()
-streak_name = input("Streak name?: ")
-streak_date = input("Start Date?: ")
-print(streak.view_latest_details(streak_name, streak_date))
+# streak.create_streak()
+# streak_name = input("Streak name?: ")
+# streak_date = input("Start Date?: ")
+# print(streak.view_latest_details(streak_name, streak_date))
 # streak._add_streaks_to_excel()
 export_current_list()
